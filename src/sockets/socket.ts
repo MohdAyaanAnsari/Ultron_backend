@@ -45,11 +45,11 @@ async function loadFAQ(): Promise<string> {
         "SELECT question, answer FROM faq"
     )
     faqCache = result.rows
-        .map((r) => `Q: ${r.question}\nA: ${r.answer}`)
+        .map((r: MessageRow) => `Q: ${r.question}\nA: ${r.answer}`)
         .join("\n\n")
     faqCacheExpiry = Date.now() + FAQ_TTL_MS
     console.log(`✅ FAQ cached: ${result.rows.length} entries (expires in 1h)`)
-    return faqCache
+    return faqCache!
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ export function socketHandler(io: Server): void {
                     [category]
                 )
                 socket.emit("suggestions", {
-                    questions: result.rows.map((r) => r.question),
+                    questions: result.rows.map((r: { question: string }) => r.question),
                 })
             } catch (err) {
                 console.error("❌ get_suggestions error:", (err as Error).message)
@@ -155,10 +155,10 @@ export function socketHandler(io: Server): void {
                     loadFAQ(),
                     chatId
                         ? db.query<MessageRow>(
-                              `SELECT question, answer FROM messages
+                            `SELECT question, answer FROM messages
                                WHERE chat_id = $1 ORDER BY id DESC LIMIT 10`,
-                              [chatId]
-                          ).then((r) => r.rows)
+                            [chatId]
+                        ).then((r: { rows: MessageRow[] }) => r.rows)
                         : Promise.resolve([] as MessageRow[]),
                 ])
 
@@ -200,7 +200,7 @@ export function socketHandler(io: Server): void {
                     })
                 }
             } catch (err) {
-                await conn.query("ROLLBACK").catch(() => {})
+                await conn.query("ROLLBACK").catch(() => { })
                 console.error("❌ send_message error:", (err as Error).message)
                 socket.emit("receive_message", {
                     chatId,
